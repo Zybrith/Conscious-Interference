@@ -1,0 +1,19 @@
+{
+  "name": "conscious_interference",
+  "version": "0.0.1",
+  "description": "Bases code for Bot",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zybrith/Conscious-Interference.git"
+  },
+  "author": "Gold, Slug, Zybrith",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zybrith/Conscious-Interference/issues"
+  },
+  "homepage": "https://github.com/Zybrith/Conscious-Interference#readme"
+}
