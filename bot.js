@@ -1,59 +1,49 @@
 const tmi = require('tmi.js');
-
-// Define configuration options
-const opts = {
-  identity: {
-    username: 'robo_goldgold',
-    password: 'cyg73wnc4c34rfbwl1z3f5ncp6ti4h'
-  },
-  channels: [
-    'GoldGoldTM', 'ZumZumTM', 'SlugSlugTM'
-  ]
-};
-
-// Create a client with our options
-const client = new tmi.client(opts);
-
-// Register our event handlers (defined below)
+const client = new tmi.Client({
+  // Log bot actions On/Off
+	options: { debug: true},
+  // Login information for Bot
+	identity: {
+		username: 'robo_goldgold',
+		password: '1gnc9qjsalw2hj2cuu2v7cwn9i1v23'
+	},
+	channels: [ 'GoldGoldTM' ]
+  
+});
+console.log(client.getUsername());
+  console.log(client.readyState());
+// Message Variable
 client.on('message', onMessageHandler);
+client.connect().catch(console.error);
+
+function onMessageHandler(channel, tags, message, self) {
+// Connected Variable
 client.on('connected', onConnectedHandler);
-
-// Connect to Twitch:
-client.connect();
-
-// Called every time a message comes in
-function onMessageHandler (target, context, msg, self) {
-  if (self) { return; } // Ignore messages from the bot
-
-  // Remove whitespace from chat message
-  const commandName = msg.trim();
+	if(self) return;
+	if(message.toLowerCase() === '!hello') {
+		client.say(channel, `@${tags.username}, heya!`);
+    console.log(`* Executed ${message} command`);
+	}
 
   // Dab Test
-  if (commandName === '!dab') {
-    client.say(target, `Kinda cringe... dont you think?`);
-    console.log(`* Executed ${commandName} command`);
+  if (message.toLowerCase() === '!dab') {
+    client.say(channel, `Kinda cringe... dont you think?`);
+    console.log(`* Executed ${message} command`);
   
   }
   // No Identifier test
-  if (commandName === 'cringe') {
-    client.say(target, `Ya that's quite cringe ngl...`);
-    console.log(`* Executed ${commandName} command`);
+  else if (message.toLowerCase() === 'cringe') {
+    client.say(channel, `Ya that's quite cringe ngl...`);
+    console.log(`* Executed ${message} command`);
   
   }
 
   // If the command is known, let's execute it
-  else if (commandName === '!dice') {
+  else if (message.toLowerCase() === '!dice') {
     const num = rollDice();
-    client.say(target, `You rolled a ${num}`);
-    console.log(`* Executed ${commandName} command`);
+    client.say(channel, `You rolled a ${num} @${tags.username}`);
+    console.log(`* Executed ${message} command`);
   } 
-  
-  // If no command's triggered, send console message
-  else {
-    console.log(`* Unknown command ${commandName}`);
-  }
-
-}
 
 // Function called when the "dice" command is issued
 function rollDice () {
@@ -65,3 +55,4 @@ function rollDice () {
 function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
 }
+};
