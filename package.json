@@ -1,0 +1,21 @@
+{
+  "name": "dice",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon bot.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "mongodb": "^4.10.0",
+    "tmi.js": "^1.8.5"
+  },
+  "devDependencies": {
+    "@types/tmi.js": "^1.8.1",
+    "nodemon": "^2.0.20"
+  }
+}
