@@ -10,7 +10,6 @@ const { MONGO_CLIENT_EVENTS } = require('mongodb');
 const MongoClient = require("mongodb").MongoClient;
 const mongoConnect = process.env.MONGO_CONNECTION;
 var shoutOutList = [];
-var autoShoutoutBL = [];
 
 // Define configuration options
 const client = new tmi.Client({
@@ -35,7 +34,7 @@ const client = new tmi.Client({
 });
 client.connect().catch(console.error);
 
-MongoClient.connect('mongodb+srv://SlugSlugTM:<password>@twitchbot.k8ok5tr.mongodb.net/?retryWrites=true&w=majority', { useUnifiedTopology: true }).then(
+MongoClient.connect(mongoConnect, { useUnifiedTopology: true }).then(
   (mongoClient) => {
     console.log("Connected to MongoClient");
     // Register our event handlers (defined below)
@@ -57,6 +56,9 @@ function onMessageHandler(channel, tags, message, self) {
   // AutoShoutOut call
   AutoShoutOut(channel, tags, message, self);
 
+  // Ban Zoe
+  //MishmxSO(channel, tags, message, self)
+
   // Moderator Actions Calls
   //checkTwitchChat(channel, message, self, tags);
 
@@ -74,13 +76,10 @@ function onMessageHandler(channel, tags, message, self) {
         `Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
       );
       console.log(`* Executed ${message} command`);
-      break;
-    case "aso":
       client.say(
         channel,
         `/announce Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
       );
-      console.log(`* Executed ${message} command`);
       break;
     //If the command is known, let's execute it
     //Hello Command
@@ -177,20 +176,24 @@ function AutoShoutOut(target, userstate, msg, self, tags, user) {
   console.log(userstate);
   var uname = userstate["username"];
   var dname = userstate["display-name"];
+  var autoShoutoutBL = configuration.operation.shoutoutBL
   // If has partner badge
+  if (autoShoutoutBL.includes(uname)) return; 
   if (shoutOutList.includes(uname)) return;
   if (userstate["badges"] && "partner" in userstate["badges"]) {
     shoutOutList.unshift(uname);
     client.say(target, `Hey go check out ${dname} over at twitch.tv/${uname}`);
+    client.say(target, `/announce Hey go check out ${dname} over at twitch.tv/${uname}`);
   }
   // If in White List
-  configuration.operation.shoutout.forEach(function (rtn, indexShoutout) {
+  else configuration.operation.shoutout.forEach(function (rtn, indexShoutout) {
     if (rtn == uname) {
       shoutOutList.unshift(uname);
       client.say(
         target,
         `Hey go check out ${dname} over at twitch.tv/${uname}`
       );
+      client.say(target, `/announce Hey go check out ${dname} over at twitch.tv/${uname}`);
     }
   });
 }
@@ -202,6 +205,20 @@ client.on("raided", (target, username, viewers) => {
     `@${username} Thank you for Raiding! Please go check them out over at twitch.tv/${username}!`
   );
 });
+
+//SO Mishmx
+/*function MishmxSO(target, userstate, msg, self, tags, user) {
+  var uname = userstate["username"];
+  if (uname === "nightbot");
+    client.say(
+      target,
+      `OMG OMG OMG OMG OMG ITS MISH!! PLEASE FOLLOW AT twitch.tv/mishmx`
+    );
+    client.say(
+      target,
+      `/announce I LITERALLY CANT BELIEVE THAT ITS MISHMX!! PLEASE FOLLOW AT twitch.tv/mishmx`
+    );
+}*/
 
 // Function to Write to White List
 /*function WhiteListUser(target, userstate, message, self, tags, user) {

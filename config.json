@@ -3,7 +3,6 @@
       "shoutout":[
          "tobs",
          "treat",
-         "slugslugtm",
          "zumzumtm",
          "vtemplar",
          "peachhana",
@@ -104,9 +103,10 @@
          "captjonesvt"
       ],
         "shoutoutBL": [
+          "streamlabs",
+          "heavenlyfather",
           "nightbot",
-          "streamelements",
-          "streamlabs"
+          "streamelements"
         ],
         "channels":[
           "slugmabot",
