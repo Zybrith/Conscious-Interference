@@ -3,13 +3,14 @@ require("dotenv").config();
 const tmi = require("tmi.js");
 const configuration = require("./config.json");
 const packageJson = require("./package.json");
-const prefix = "!!";
+const prefix = "!";
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const fs = require("fs");
-const { MONGO_CLIENT_EVENTS } = require('mongodb');
+const { MONGO_CLIENT_EVENTS } = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
 const mongoConnect = process.env.MONGO_CONNECTION;
 var shoutOutList = [];
+const soBadges = ["moderator", "broadcaster"];
 
 // Define configuration options
 const client = new tmi.Client({
@@ -34,29 +35,26 @@ const client = new tmi.Client({
 });
 client.connect().catch(console.error);
 
-MongoClient.connect(mongoConnect, { useUnifiedTopology: true }).then(
-  (mongoClient) => {
+MongoClient.connect(mongoConnect, { useUnifiedTopology: true })
+  .then((mongoClient) => {
     console.log("Connected to MongoClient");
     // Register our event handlers (defined below)
     client.on("message", onMessageHandler);
-  }
-)
-.catch(err=>console.log(err))
+  })
+  .catch((err) => console.log(err));
 
 // Called every time a message comes in
-function onMessageHandler(channel, tags, message, self) {
+function onMessageHandler(channel, userstate, message, self) {
   client.on("connected", onConnectedHandler);
 
   /* message handler */
   let rawargs = message.trim().split(/ +/);
 
   let prefixRegex = new RegExp(`^(${escapeRegex(prefix)})\\s*`);
-  let matchedPrefix = message.match(prefixRegex);
-
   // AutoShoutOut call
-  AutoShoutOut(channel, tags, message, self);
+  AutoShoutOut(channel, userstate, message, self);
 
-  // Ban Zoe
+  // Special Shoutout for Mish
   //MishmxSO(channel, tags, message, self)
 
   // Moderator Actions Calls
@@ -64,32 +62,39 @@ function onMessageHandler(channel, tags, message, self) {
 
   if (!prefixRegex.test(message)) return;
 
-  let args = message.slice(matchedPrefix.length).trim().split(/ +/);
+  let args = message.slice(prefix.length).trim().split(/ +/);
 
   const command = args.shift().toLowerCase();
-
   switch (command) {
     case "so":
-      //if (userstate["badges"] && "broadcaster" || "moderator" in userstate["badges"]);
-      client.say(
-        channel,
-        `Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+      const canSO = Object.keys(userstate["badges"]).some((badge) =>
+        soBadges.includes(badge)
       );
-      console.log(`* Executed ${message} command`);
-      client.say(
-        channel,
-        `/announce Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
-      );
+      if (canSO) {
+        client.say(
+          channel,
+          `Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+        );
+        console.log(`* Executed ${message} command`);
+        client.say(
+          channel,
+          `/announce Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+        );
+      }
+
       break;
     //If the command is known, let's execute it
     //Hello Command
     case "hello":
-      client.say(channel, `@${tags.username}, heya!`);
+      client.say(channel, `@${userstate.username}, heya!`);
       console.log(`* Executed ${message} command`);
       break;
     //Bye Command
     case "bye":
-      client.say(channel, `@${tags.username}, You're not allowed to leave!`);
+      client.say(
+        channel,
+        `@${userstate.username}, You're not allowed to leave!`
+      );
       console.log(`* Executed ${message} command`);
       break;
     //Roll Dice Command
@@ -116,12 +121,15 @@ function onMessageHandler(channel, tags, message, self) {
       break;
     //lurk command
     case "lurk":
-      client.say(channel, `${tags.username} is lurking and will return soon`);
+      client.say(
+        channel,
+        `${userstate.username} is lurking and will return soon`
+      );
       console.log(`* Executed ${message} command`);
       break;
     //head pat command
     case "pats":
-      client.say(channel, `${tags.username} pats ${rawargs[1]}`);
+      client.say(channel, `${userstate.username} pats ${rawargs[1]}`);
       console.log(`* Executed ${message} command`);
       break;
     //melina command
@@ -153,17 +161,20 @@ function onMessageHandler(channel, tags, message, self) {
     //Debug call command
     case "debug":
       if (
-        tags.username == "slugslugtm" ||
-        tags.username == "goldgoldtm" ||
-        tags.username == "zybrith"
+        userstate.username == "slugslugtm" ||
+        userstate.username == "goldgoldtm" ||
+        userstate.username == "zybrith"
       ) {
-        debugCommand(channel, tags, message, false);
+        debugCommand(channel, userstate, message, false);
       } else {
-        cient.say(channel, `${tags.username} -> You can't use this command.`);
+        cient.say(
+          channel,
+          `${userstate.username} -> You can't use this command.`
+        );
       }
       break;
     case "whitelist":
-      WhiteListUser(target, userstate, message, self, tags, user);
+      WhiteListUser(target, userstate, message, self, userstate, user);
       console.log(`* Executed ${message} command`);
   }
   if (self) {
@@ -176,49 +187,57 @@ function AutoShoutOut(target, userstate, msg, self, tags, user) {
   console.log(userstate);
   var uname = userstate["username"];
   var dname = userstate["display-name"];
-  var autoShoutoutBL = configuration.operation.shoutoutBL
+  var autoShoutoutBL = configuration.operation.shoutoutBL;
   // If has partner badge
-  if (autoShoutoutBL.includes(uname)) return; 
+  if (autoShoutoutBL.includes(uname)) return;
   if (shoutOutList.includes(uname)) return;
   if (userstate["badges"] && "partner" in userstate["badges"]) {
     shoutOutList.unshift(uname);
     client.say(target, `Hey go check out ${dname} over at twitch.tv/${uname}`);
-    client.say(target, `/announce Hey go check out ${dname} over at twitch.tv/${uname}`);
+    client.say(
+      target,
+      `/announce Hey go check out ${dname} over at twitch.tv/${uname}`
+    );
   }
   // If in White List
-  else configuration.operation.shoutout.forEach(function (rtn, indexShoutout) {
-    if (rtn == uname) {
-      shoutOutList.unshift(uname);
-      client.say(
-        target,
-        `Hey go check out ${dname} over at twitch.tv/${uname}`
-      );
-      client.say(target, `/announce Hey go check out ${dname} over at twitch.tv/${uname}`);
-    }
-  });
+  else
+    configuration.operation.shoutout.forEach(function (rtn, indexShoutout) {
+      if (rtn == uname) {
+        shoutOutList.unshift(uname);
+        client.say(
+          target,
+          `Hey go check out ${dname} over at twitch.tv/${uname}`
+        );
+        client.say(
+          target,
+          `/announce Hey go check out ${dname} over at twitch.tv/${uname}`
+        );
+      }
+    });
 }
 
 // Raid AutoShoutOut
 client.on("raided", (target, username, viewers) => {
   client.say(
     target,
-    `@${username} Thank you for Raiding! Please go check them out over at twitch.tv/${username}!`
+    `${username} Thank you for Raiding! Please go check them out over at twitch.tv/${username}!`
   );
+  client.say(
+    target,
+    `/announce Hey go check out ${username} over at twitch.tv/${username}`
+  );
+  client.say(target, `/shoutout ${username}`);
 });
 
 //SO Mishmx
-/*function MishmxSO(target, userstate, msg, self, tags, user) {
+function MishmxSO(target, userstate, msg, self, tags, user) {
   var uname = userstate["username"];
-  if (uname === "nightbot");
+  if (uname == "nightbot")
     client.say(
       target,
       `OMG OMG OMG OMG OMG ITS MISH!! PLEASE FOLLOW AT twitch.tv/mishmx`
     );
-    client.say(
-      target,
-      `/announce I LITERALLY CANT BELIEVE THAT ITS MISHMX!! PLEASE FOLLOW AT twitch.tv/mishmx`
-    );
-}*/
+}
 
 // Function to Write to White List
 /*function WhiteListUser(target, userstate, message, self, tags, user) {
