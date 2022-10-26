@@ -9,7 +9,7 @@ const fs = require("fs");
 const { MONGO_CLIENT_EVENTS } = require("mongodb");
 const MongoClient = require("mongodb").MongoClient;
 const mongoConnect = process.env.MONGO_CONNECTION;
-var shoutOutList = [];
+let shoutOutList = [];
 const soBadges = ["moderator", "broadcaster"];
 
 // Define configuration options
@@ -34,160 +34,171 @@ const client = new tmi.Client({
   channels: configuration.operation.channels,
 });
 client.connect().catch(console.error);
+client.on("message", onMessageHandler);
 
-MongoClient.connect(mongoConnect, { useUnifiedTopology: true })
-  .then((mongoClient) => {
-    console.log("Connected to MongoClient");
-    // Register our event handlers (defined below)
-    client.on("message", onMessageHandler);
-  })
-  .catch((err) => console.log(err));
+
 
 // Called every time a message comes in
 function onMessageHandler(channel, userstate, message, self) {
-  client.on("connected", onConnectedHandler);
-
-  /* message handler */
-  let rawargs = message.trim().split(/ +/);
-
-  let prefixRegex = new RegExp(`^(${escapeRegex(prefix)})\\s*`);
-  // AutoShoutOut call
-  AutoShoutOut(channel, userstate, message, self);
-
-  // Special Shoutout for Mish
-  //MishmxSO(channel, tags, message, self)
-
-  // Moderator Actions Calls
-  //checkTwitchChat(channel, message, self, tags);
-
-  if (!prefixRegex.test(message)) return;
-
-  let args = message.slice(prefix.length).trim().split(/ +/);
-
-  const command = args.shift().toLowerCase();
-  switch (command) {
-    case "so":
-      const canSO = Object.keys(userstate["badges"]).some((badge) =>
-        soBadges.includes(badge)
-      );
-      if (canSO) {
+  console.log('channel: ', channel);
+  MongoClient.connect(mongoConnect, { useUnifiedTopology: true })
+.then((mongoClient) => {
+  console.log("Connected to MongoClient");
+  const db = mongoClient.db("SlugmaBot");
+  const operationsCollection = db.collection("Operations");
+  operationsCollection.find({channel: channel.slice(1)}).toArray()
+  .then(results => {
+    console.log('results: ', results);
+    client.on("connected", onConnectedHandler);
+    
+    
+    /* message handler */
+    let rawargs = message.trim().split(/ +/);
+    
+    let prefixRegex = new RegExp(`^(${escapeRegex(prefix)})\\s*`);
+    // AutoShoutOut call
+    AutoShoutOut(channel, userstate, message, self);
+    
+    // Special Shoutout for Mish
+    //MishmxSO(channel, tags, message, self)
+    
+    // Moderator Actions Calls
+    //checkTwitchChat(channel, message, self, tags);
+    
+    if (!prefixRegex.test(message)) return;
+    
+    let args = message.slice(prefix.length).trim().split(/ +/);
+    
+    const command = args.shift().toLowerCase();
+    switch (command) {
+      case "so":
+        const canSO = Object.keys(userstate["badges"]).some((badge) =>
+          soBadges.includes(badge)
+        );
+        if (canSO) {
+          client.say(
+            channel,
+            `Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+          );
+          console.log(`* Executed ${message} command`);
+          client.say(
+            channel,
+            `/announce Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+          );
+        }
+    
+        break;
+      //If the command is known, let's execute it
+      //Hello Command
+      case "hello":
+        client.say(channel, `@${userstate.username}, heya!`);
+        console.log(`* Executed ${message} command`);
+        break;
+      //Bye Command
+      case "bye":
         client.say(
           channel,
-          `Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+          `@${userstate.username}, You're not allowed to leave!`
         );
         console.log(`* Executed ${message} command`);
+        break;
+      //Roll Dice Command
+      case "dice":
+        const num = rollDice();
+        client.say(channel, `You rolled a ${num}`);
+        console.log(`* Executed ${message} command`);
+        break;
+      //support for bjurkk
+      case "bjurkk":
         client.say(
           channel,
-          `/announce Check out ${rawargs[1]} over at https://twitch.tv/${rawargs[1]}`
+          "Bjurkk deserves your support, subscribe to Youtube and Follow on twitch: https://www.youtube.com/channel/UCZR3mlfEWsBB4ZV-bZQqbtQ : https://www.twitch.tv/bjurkk"
         );
-      }
-
-      break;
-    //If the command is known, let's execute it
-    //Hello Command
-    case "hello":
-      client.say(channel, `@${userstate.username}, heya!`);
-      console.log(`* Executed ${message} command`);
-      break;
-    //Bye Command
-    case "bye":
-      client.say(
-        channel,
-        `@${userstate.username}, You're not allowed to leave!`
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //Roll Dice Command
-    case "dice":
-      const num = rollDice();
-      client.say(channel, `You rolled a ${num}`);
-      console.log(`* Executed ${message} command`);
-      break;
-    //support for bjurkk
-    case "bjurkk":
-      client.say(
-        channel,
-        "Bjurkk deserves your support, subscribe to Youtube and Follow on twitch: https://www.youtube.com/channel/UCZR3mlfEWsBB4ZV-bZQqbtQ : https://www.twitch.tv/bjurkk"
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //get cucked peen
-    case "peen":
-      client.say(
-        channel,
-        "@SenorSpicyPeen Peter Grill has B tier plot, copium."
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //lurk command
-    case "lurk":
-      client.say(
-        channel,
-        `${userstate.username} is lurking and will return soon`
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //head pat command
-    case "pats":
-      client.say(channel, `${userstate.username} pats ${rawargs[1]}`);
-      console.log(`* Executed ${message} command`);
-      break;
-    //melina command
-    case "melina":
-      client.say(
-        channel,
-        "You... have inherited the Frenzied Flame. A pity. You are no longer fit. Our journey together ends here. And remember... Should you rise as the Lord of Chaos, I will kill you, as sure as night follows day. Such is my duty, for allowing you the strength of runes. Goodbye, my companion. Goodbye, Torrent..."
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //cringe command
-    case "cringe":
-      client.say(Channel, "Thats cringe af fr fr on god");
-      console.log(`* Executed ${message} command`);
-      break;
-    //en command
-    case "en":
-      client.say(Channel, "EN is loved by Slug, brought to you by SlugmaBot");
-      console.log(`* Executed ${message} command`);
-      break;
-    //kei chad command
-    case "kei":
-      client.say(
-        channel,
-        "KEI CHAD KEI CHAD KEI CHAD KEI CHAD KEI CHAD KEI CHAD"
-      );
-      console.log(`* Executed ${message} command`);
-      break;
-    //Debug call command
-    case "debug":
-      if (
-        userstate.username == "slugslugtm" ||
-        userstate.username == "goldgoldtm" ||
-        userstate.username == "zybrith"
-      ) {
-        debugCommand(channel, userstate, message, false);
-      } else {
-        cient.say(
+        console.log(`* Executed ${message} command`);
+        break;
+      //get cucked peen
+      case "peen":
+        client.say(
           channel,
-          `${userstate.username} -> You can't use this command.`
+          "@SenorSpicyPeen Peter Grill has B tier plot, copium."
         );
-      }
-      break;
-    case "whitelist":
-      WhiteListUser(target, userstate, message, self, userstate, user);
-      console.log(`* Executed ${message} command`);
-  }
-  if (self) {
-    return;
-  } // Ignore messages from the bot
+        console.log(`* Executed ${message} command`);
+        break;
+      //lurk command
+      case "lurk":
+        client.say(
+          channel,
+          `${userstate.username} is lurking and will return soon`
+        );
+        console.log(`* Executed ${message} command`);
+        break;
+      //head pat command
+      case "pats":
+        client.say(channel, `${userstate.username} pats ${rawargs[1]}`);
+        console.log(`* Executed ${message} command`);
+        break;
+      //melina command
+      case "melina":
+        client.say(
+          channel,
+          "You... have inherited the Frenzied Flame. A pity. You are no longer fit. Our journey together ends here. And remember... Should you rise as the Lord of Chaos, I will kill you, as sure as night follows day. Such is my duty, for allowing you the strength of runes. Goodbye, my companion. Goodbye, Torrent..."
+        );
+        console.log(`* Executed ${message} command`);
+        break;
+      //cringe command
+      case "cringe":
+        client.say(Channel, "Thats cringe af fr fr on god");
+        console.log(`* Executed ${message} command`);
+        break;
+      //en command
+      case "en":
+        client.say(Channel, "EN is loved by Slug, brought to you by SlugmaBot");
+        console.log(`* Executed ${message} command`);
+        break;
+      //kei chad command
+      case "kei":
+        client.say(
+          channel,
+          "KEI CHAD KEI CHAD KEI CHAD KEI CHAD KEI CHAD KEI CHAD"
+        );
+        console.log(`* Executed ${message} command`);
+        break;
+      //Debug call command
+      case "debug":
+        if (
+          userstate.username == "slugslugtm" ||
+          userstate.username == "goldgoldtm" ||
+          userstate.username == "zybrith"
+        ) {
+          debugCommand(channel, userstate, message, false);
+        } else {
+          cient.say(
+            channel,
+            `${userstate.username} -> You can't use this command.`
+          );
+        }
+        break;
+      case "whitelist":
+        WhiteListUser(target, userstate, message, self, userstate, user);
+        console.log(`* Executed ${message} command`);
+    }
+    if (self) {
+      return;
+    } // Ignore messages from the bot
+
+  } )
+  .catch(error => console.log(error))
+  // Register our event handlers (defined below)
+})
+.catch((err) => console.log(err));
 }
 
 // Function Called when White Listed User chats for Auto-Shoutout
 function AutoShoutOut(target, userstate, msg, self, tags, user) {
   console.log(userstate);
-  var uname = userstate["username"];
-  var dname = userstate["display-name"];
-  var autoShoutoutBL = configuration.operation.shoutoutBL;
+  let uname = userstate["username"];
+  let dname = userstate["display-name"];
+  let autoShoutoutBL = configuration.operation.shoutoutBL;
   // If has partner badge
   if (autoShoutoutBL.includes(uname)) return;
   if (shoutOutList.includes(uname)) return;
@@ -231,7 +242,7 @@ client.on("raided", (target, username, viewers) => {
 
 //SO Mishmx
 function MishmxSO(target, userstate, msg, self, tags, user) {
-  var uname = userstate["username"];
+  let uname = userstate["username"];
   if (uname == "nightbot")
     client.say(
       target,
@@ -248,8 +259,8 @@ function MishmxSO(target, userstate, msg, self, tags, user) {
 
 // Function called for Blocked Terms
 function checkTwitchChat(channel, userstate, message, self, tags) {
-  var uname = userstate["username"];
-  var msgID = userstate["id"];
+  let uname = userstate["username"];
+  let msgID = userstate["id"];
   let shouldSendMessage = false;
   shouldSendMessage = blockedWord.some((blockedWords) =>
     message.includes(blockedWords.toLowerCase())
@@ -275,8 +286,8 @@ function debugCommand(target, userstate, msg, self, tags, user) {
   let args = msg.slice(matchedPrefix.length).trim().split(/ +/);
   let subCommand = args[1];
 
-  var badges = JSON.stringify(userstate["badges"]);
-  var uname = userstate["username"];
+  let badges = JSON.stringify(userstate["badges"]);
+  let uname = userstate["username"];
   let message = args.splice(0, 2);
   let chnl = args[0];
   console.log(args);
